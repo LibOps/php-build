@@ -1,0 +1,55 @@
+name: Workflow Template - PHP build+push
+on:
+  workflow_call:
+    inputs:
+      major_version:
+        required: true
+        type: string
+      minor_version:
+        required: true
+        type: string
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+    - name: Extract branch name
+      shell: bash
+      run: echo "branch=${GITHUB_REF#refs/heads/}"  >> $GITHUB_OUTPUT
+      id: extract_branch
+    - name: Extract tag name
+      shell: bash
+      run: |-
+        t=$(echo ${GITHUB_SHA} | cut -c1-7)
+        echo "tag=$t" >> $GITHUB_OUTPUT
+      id: extract_tag
+    - uses: 'actions/checkout@v3'
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v0'
+      with:
+        workload_identity_provider: ${{ secrets.GCLOUD_OIDC_POOL }}
+        create_credentials_file: true
+        service_account: ${{ secrets.GSA }}
+        token_format: 'access_token'
+    - uses: 'docker/login-action@v1'
+      name: 'Docker login init'
+      with:
+        registry: 'us-docker.pkg.dev'
+        username: 'oauth2accesstoken'
+        password: '${{ steps.auth.outputs.access_token }}'
+    - run: |-
+        echo '${{ steps.auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://us-docker.pkg.dev
+      name: 'Docker login'
+    - name: Build and push
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        push: true
+        build-args: PHP_VERSION=${{ inputs.major_version }}.${{ inputs.minor_version }}
+        tags: |
+          us-docker.pkg.dev/${{ secrets.GCLOUD_PROJECT }}/shared/php-build:${{ inputs.major_version }}-${{steps.extract_branch.outputs.branch}}-${{steps.extract_tag.outputs.tag}}
+          us-docker.pkg.dev/${{ secrets.GCLOUD_PROJECT }}/shared/php-build:${{ inputs.major_version }}-${{steps.extract_branch.outputs.branch}}

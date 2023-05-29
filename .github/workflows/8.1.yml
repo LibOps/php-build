@@ -1,0 +1,16 @@
+name: Build and push (8.1)
+on:
+  schedule:
+    - cron: '45 6 * * 6'
+  push:
+    branches:
+jobs:
+  deploy:
+    uses: ./.github/workflows/build-push.yml
+    with:
+      major_version: 8.1
+      minor_version: 19
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
