@@ -45,7 +45,7 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 RUN useradd -m -d /code -u 1080 php \
-  && chown -R php /code /public \
+  && chown -R php /code /public /private \
   && chmod -R 755 /code /public /private \
   && rm /usr/bin/perl /usr/bin/perl5.32-x86_64-linux-gnu /usr/bin/perl5.32.1
 
